@@ -1,0 +1,76 @@
+{
+  "background_color": "#09090b",
+  "description": "A dark-themed secure local document and comic viewer.",
+  "dir": "auto",
+  "display": "fullscreen",
+  "name": "Visual X",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "Visual X",
+  "start_url": "/https://visual-x-beryl.vercel.app",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+visualx",
+      "url": "/?open=%s"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Sincronizar Archivos",
+      "short_name": "Sincronizar",
+      "description": "Abrir el menú de sincronización",
+      "url": "/?action=sync",
+      "icons": [
+        {
+          "src": "/icon.png",
+          "sizes": "512x512"
+        }
+      ]
+    }
+  ],
+  "widgets": [
+    {
+      "name": "Visual X Recientes",
+      "description": "Muestra los archivos visualizados recientemente",
+      "tag": "visualx-recent",
+      "ms_ac_template": "/widgets/template.json",
+      "data": "/widgets/data.json",
+      "type": "application/json",
+      "icons": [
+        {
+          "src": "/icon.png",
+          "sizes": "512x512"
+        }
+      ]
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/",
+      "accept": {
+        "application/pdf": [".pdf"],
+        "application/zip": [".zip", ".cbz"],
+        "application/vnd.comicbook+zip": [".cbz"],
+        "application/vnd.comicbook-rar": [".cbr"],
+        "application/epub+zip": [".epub"]
+      }
+    }
+  ],
+  "categories": [
+    "books",
+    "books &amp; reference",
+    "entertainment"
+  ]
+}
