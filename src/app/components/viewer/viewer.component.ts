@@ -10,13 +10,15 @@ import * as JSZip from 'jszip';
 import * as parse5 from 'parse5';
 
 // Hack for EPUB.js to parse malformed XML as HTML
-const originalParse = window.DOMParser.prototype.parseFromString;
-window.DOMParser.prototype.parseFromString = function(string: string, type: DOMParserSupportedType) {
-    if (type === 'application/xhtml+xml') {
-        type = 'text/html';
-    }
-    return originalParse.call(this, string, type);
-};
+if (typeof window !== 'undefined' && window.DOMParser) {
+    const originalParse = window.DOMParser.prototype.parseFromString;
+    window.DOMParser.prototype.parseFromString = function(string: string, type: DOMParserSupportedType) {
+        if (type === 'application/xhtml+xml') {
+            type = 'text/html';
+        }
+        return originalParse.call(this, string, type);
+    };
+}
 // Mammoth and PDF.js will be loaded dynamically to avoid build issues if types are weird.
 
 interface Page {

@@ -6,42 +6,6 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     
-    <!-- Critical inline CSS: loader + prevent flash of unstyled content -->
-    <style>
-      /* Minimal critical CSS to avoid FOUC while main CSS/JS loads */
-      html,body {height:100%;}
-      body.app-loading {overflow:hidden;}
-      /* Hide the application root until we are ready */
-      body.app-loading app-root {visibility:hidden;}
-
-      /* Fullscreen loader */
-      #initial-loader {
-        position:fixed;
-        inset:0;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        background-color:#0b0b0b; /* dark background to match theme */
-        color: #fff;
-        z-index:9999;
-        -webkit-font-smoothing:antialiased;
-      }
-
-      /* Spinner */
-      .spinner {
-        width:56px;
-        height:56px;
-        border-radius:50%;
-        border:6px solid rgba(255,255,255,0.1);
-        border-top-color: #ffffff;
-        animation: spin 1s linear infinite;
-      }
-      @keyframes spin { to { transform: rotate(360deg); } }
-
-      /* Hide loader when body loses the .app-loading class via inline JS */
-      body:not(.app-loading) #initial-loader { display:none; }
-    </style>
-
     <!-- Open Graph / Meta tags -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://ais-pre-2c3vkbq3u2erqmhnwu2d46-381092709044.us-west2.run.app/" />
@@ -66,61 +30,24 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Visual X">
-
-    <!-- Preload main stylesheet (non-blocking) -->
-    <link rel="preload" href="/styles.css" as="style" onload="this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="/styles.css"></noscript>
-
-    <!-- Preload Google Fonts stylesheet (optional) to improve text rendering) -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" as="style" onload="this.rel='stylesheet'">
-
-    <!-- Inline small script to remove loader when app is ready -->
     <script>
-      (function(){
-        // Ensure the body initially has the loading class (default in HTML too)
-        try { document.documentElement.classList.add('has-js'); } catch(e){}
-
-        // Remove loader when one of these happens (in this order of preference):
-        // 1) A custom event 'app:bootstrapped' (future-proof if app dispatches it)
-        // 2) When fonts are loaded and DOMContent is interactive
-        // 3) Window load
-        // 4) Timeout fallback (3s)
-
-        var done = false;
-        function finish() {
-          if (done) return; done = true;
-          document.body.classList.remove('app-loading');
-        }
-
-        // Listen for a custom event that Angular (or other boot code) could dispatch
-        window.addEventListener('app:bootstrapped', finish);
-
-        // If document.fonts API available, wait for fonts to be ready (improves stability)
-        if (document.fonts && document.fonts.ready) {
-          document.fonts.ready.then(function(){
-            // If DOM is already interactive, finish; otherwise wait for DOMContentLoaded
-            if (document.readyState === 'interactive' || document.readyState === 'complete') {
-              finish();
-            } else {
-              document.addEventListener('DOMContentLoaded', finish);
-            }
-          }).catch(function(){ /* ignore */ });
-        }
-
-        // Window load as a reliable fallback
-        window.addEventListener('load', finish);
-
-        // Final safety timeout so loader doesn't block forever
-        setTimeout(finish, 3000);
-      })();
+      window.onerror = function(message, source, lineno, colno, error) {
+         fetch('/api/log', {
+           method: 'POST', 
+           headers: {'Content-Type': 'application/json'},
+           body: JSON.stringify({ type: 'uncaught', message, source, lineno, colno, stack: error ? error.stack : '' })
+         }).catch(e => console.error(e));
+      };
+      window.addEventListener('unhandledrejection', function(e) {
+         fetch('/api/log', {
+           method: 'POST', 
+           headers: {'Content-Type': 'application/json'},
+           body: JSON.stringify({ type: 'unhandledrejection', reason: e.reason ? e.reason.toString() : 'unknown', stack: e.reason ? e.reason.stack : '' })
+         }).catch(err => console.error(err));
+      });
     </script>
   </head>
-  <body class="app-loading">
-    <!-- Initial loader shown until page/app is ready -->
-    <div id="initial-loader" aria-hidden="true">
-      <div class="spinner" role="status" aria-label="loading"></div>
-    </div>
-
+  <body>
     <app-root></app-root>
     <noscript>Please enable JavaScript to continue using this application.</noscript>
     <script>

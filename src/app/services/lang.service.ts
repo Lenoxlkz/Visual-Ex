@@ -1,4 +1,5 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 
 export type Lang = 'es' | 'en';
 
@@ -40,7 +41,7 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     'Welcome Feature 2': '<b>Conversión Inteligente:</b> Realiza conversiones de PDF a ePUB.',
     'Welcome Feature 3': '<b>Modos de Lectura:</b> Disfruta de scroll vertical fluido, cambio de página horizontal y Auto-scroll disponible.',
     'Welcome Feature 4': '<b>Librería Organizada:</b> Crea carpetas y organiza todos tus documentos de manera fácil.',
-    'Welcome Attention': 'ⓘ <b>Atención:</b> Archivos superiores a 400MB - 600MB pueden exceder la capacidad de procesamiento del navegador, lo que podría causar errores o bloqueos en la web. Se recomienda evitar la carga de archivos muy pesados para asegurar un funcionamiento óptimo. ->En la versión APK, esta limitación no es notable así que puedes subir con moderación archivos pesados, pero recuerda la advertencia anterior aún así.',
+    'Welcome Attention': 'ⓘ <b>Atención:</b> Archivos sumamente pesados pueden exceder la capacidad estándar de procesamiento del navegador, lo que podría causar errores, bloqueos en la web o incluso muerte del navegador. Se recomienda evitar la carga de archivos muy o sumamente pesados para asegurar un funcionamiento óptimo.<br><br>->Para dispositivos con poca RAM se recomienda no subir archivos pesados superior a 300-400mb.<br>-Dispositivos con mayor RAM a 6Gb o 8Gb, pueden subir archivos pesados pero con moderación.<br>->Dispositivos con mayor RAM a 12Gb o 16Gb, pueden subir archivos pesados sin alto riesgo de navegador muerto.',
     'Dont Show Again': 'Dejar de mostrar de ahora en adelante',
     'Continue': 'Continuar',
     'Settings': 'Ajustes',
@@ -116,7 +117,7 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     'Welcome Feature 2': '<b>Smart Conversion:</b> Perform smart PDF to ePUB conversions.',
     'Welcome Feature 3': '<b>Reading Modes:</b> Enjoy fluid vertical scroll, horizontal page turn, and Auto-scroll available.',
     'Welcome Feature 4': '<b>Organized Library:</b> Create folders and easily organize all your documents.',
-    'Welcome Attention': 'ⓘ <b>Attention:</b> Files larger than 400MB - 600MB may exceed the browser\'s processing capacity, potentially causing web errors or crashes. It is recommended to avoid loading very heavy files to ensure optimal performance. ->In the APK version, this limitation is not noticeable so you can upload heavy files with moderation, but remember the previous warning regardless.',
+    'Welcome Attention': 'ⓘ <b>Attention:</b> Extremely heavy files may exceed the browser\'s standard processing capacity, which could cause errors, web crashes or even browser death. It is recommended to avoid uploading very or extremely heavy files to ensure optimal performance.<br><br>->For low RAM devices, it is recommended not to upload heavy files exceeding 300-400mb.<br>-Devices with RAM greater than 6Gb or 8Gb can upload heavy files but with moderation.<br>->Devices with RAM greater than 12Gb or 16Gb can upload heavy files without high risk of a dead browser.',
     'Dont Show Again': 'Do not show this again',
     'Continue': 'Continue',
     'Settings': 'Settings',
@@ -162,9 +163,12 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
 })
 export class LangService {
   currentLang = signal<Lang>('es');
+  private platformId = inject(PLATFORM_ID);
 
   constructor() {
-    this.initLang();
+    if (isPlatformBrowser(this.platformId)) {
+      this.initLang();
+    }
   }
 
   initLang() {

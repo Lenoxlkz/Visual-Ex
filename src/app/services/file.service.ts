@@ -1,4 +1,5 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 
@@ -32,16 +33,18 @@ interface AppDB extends DBSchema {
 
 @Injectable({ providedIn: 'root' })
 export class FileService {
-  private dbPromise: Promise<IDBPDatabase<AppDB>>;
+  private dbPromise: Promise<IDBPDatabase<AppDB> | null>;
   
   // Using a signal to notify the UI when files change
   filesChanged = signal<number>(0);
 
   private router = inject(Router);
+  private platformId = inject(PLATFORM_ID);
 
   constructor() {
-    this.dbPromise = openDB<AppDB>('file-viewer-db', 4, {
-      async upgrade(db, oldVersion, newVersion, transaction) {
+    if (isPlatformBrowser(this.platformId)) {
+      this.dbPromise = openDB<AppDB>('file-viewer-db', 4, {
+        async upgrade(db, oldVersion, newVersion, transaction) {
         let store;
         if (oldVersion < 1) {
           store = db.createObjectStore('files', { keyPath: 'id' });
@@ -72,7 +75,10 @@ export class FileService {
     });
 
     this.initLaunchQueue();
+  } else {
+    this.dbPromise = Promise.resolve(null);
   }
+}
 
   private initLaunchQueue() {
     if ('launchQueue' in window) {
@@ -96,6 +102,7 @@ export class FileService {
 
   async getRecentFiles(limit: number = 30): Promise<AppFile[]> {
     const db = await this.dbPromise;
+    if (!db) return [];
     const tx = db.transaction('files', 'readonly');
     const index = tx.store.index('by-lastOpened');
     let cursor = await index.openCursor(null, 'prev'); // sort descending
@@ -112,6 +119,7 @@ export class FileService {
 
   async updateLastOpened(id: string): Promise<void> {
     const db = await this.dbPromise;
+    if (!db) return;
     const item = await db.get('files', id);
     if (item) {
         item.lastOpened = Date.now();
@@ -122,6 +130,7 @@ export class FileService {
 
   async getFilesByParent(parentId: string = 'root'): Promise<AppFile[]> {
     const db = await this.dbPromise;
+    if (!db) return [];
     const tx = db.transaction('files', 'readonly');
     const index = tx.store.index('by-parent');
     let cursor = await index.openCursor(parentId);
@@ -136,16 +145,19 @@ export class FileService {
 
   async getFileMetadata(id: string): Promise<AppFile | undefined> {
     const db = await this.dbPromise;
+    if (!db) return undefined;
     return await db.get('files', id);
   }
 
   async getFileContent(id: string): Promise<Blob | undefined> {
     const db = await this.dbPromise;
+    if (!db) return undefined;
     return await db.get('file-contents', id);
   }
 
   async createFolder(name: string, parentId: string = 'root'): Promise<string> {
     const db = await this.dbPromise;
+    if (!db) return '';
     const id = crypto.randomUUID();
     await db.put('files', {
       id,
@@ -160,6 +172,7 @@ export class FileService {
 
   async storeFile(file: File, parentId: string = 'root'): Promise<string> {
     const db = await this.dbPromise;
+    if (!db) return '';
     const id = crypto.randomUUID();
     const extension = file.name.split('.').pop()?.toLowerCase();
     
@@ -183,6 +196,7 @@ export class FileService {
 
   async deleteItem(id: string): Promise<void> {
     const db = await this.dbPromise;
+    if (!db) return;
     const item = await db.get('files', id);
     if (!item) return;
 
@@ -441,6 +455,7 @@ ${navPointsHtml}
 
   async clearAll(): Promise<void> {
     const db = await this.dbPromise;
+    if (!db) return;
     const tx = db.transaction(['files', 'file-contents'], 'readwrite');
     await tx.objectStore('files').clear();
     await tx.objectStore('file-contents').clear();
@@ -450,6 +465,7 @@ ${navPointsHtml}
 
   async getTotalSize(): Promise<number> {
     const db = await this.dbPromise;
+    if (!db) return 0;
     const files = await db.getAll('files');
     return files.reduce((acc, file) => acc + (file.size || 0), 0);
   }

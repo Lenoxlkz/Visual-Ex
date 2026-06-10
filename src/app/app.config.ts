@@ -2,7 +2,8 @@ import {
   ApplicationConfig,
   provideBrowserGlobalErrorListeners,
   ErrorHandler,
-  isDevMode
+  isDevMode,
+  provideZonelessChangeDetection
 } from '@angular/core';
 import {provideRouter} from '@angular/router';
 
@@ -24,6 +25,7 @@ class GlobalErrorHandler implements ErrorHandler {
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    provideZonelessChangeDetection(),
     provideBrowserGlobalErrorListeners(), 
     provideRouter(routes),
     {provide: ErrorHandler, useClass: GlobalErrorHandler}

@@ -1,4 +1,5 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { FileService } from './file.service';
 
 export type SyncInterval = 'off' | '6h' | '12h' | '24h' | '32h' | '48h' | '7d' | '15d' | '30d' | '60d' | '90d';
@@ -21,16 +22,19 @@ export class SyncService {
   
   // Expose an event or signal to trigger sync UI opening
   triggerSyncUI = signal<number>(0);
+  private platformId = inject(PLATFORM_ID);
 
   constructor() {
-     this.checkEnvironment();
-     this.loadSettings();
+     if (isPlatformBrowser(this.platformId)) {
+       this.checkEnvironment();
+       this.loadSettings();
 
-     // Expose a callback for the Android bridge to notify us when sync is complete
-     (window as any).onNativeSyncComplete = () => {
-         console.log("Native sync completed.");
-         this.isLoading.set(false);
-     };
+       // Expose a callback for the Android bridge to notify us when sync is complete
+       (window as any).onNativeSyncComplete = () => {
+           console.log("Native sync completed.");
+           this.isLoading.set(false);
+       };
+     }
   }
 
   private checkEnvironment() {

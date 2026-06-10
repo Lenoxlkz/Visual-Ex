@@ -1,13 +1,17 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 
 export type Theme = 'light' | 'dark' | 'system';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   currentTheme = signal<Theme>('system');
+  private platformId = inject(PLATFORM_ID);
 
   constructor() {
-    this.initTheme();
+    if (isPlatformBrowser(this.platformId)) {
+      this.initTheme();
+    }
   }
 
   initTheme() {

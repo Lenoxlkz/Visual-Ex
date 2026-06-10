@@ -13,26 +13,28 @@ console.error = function(...args: any[]) {
     originalError.apply(console, args);
 };
 
-window.addEventListener('error', e => {
-    if (e.message && e.message.includes('ResizeObserver')) {
-        e.stopImmediatePropagation();
-        e.preventDefault();
-    }
-}, true);
+if (typeof window !== 'undefined') {
+    window.addEventListener('error', e => {
+        if (e.message && e.message.includes('ResizeObserver')) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+        }
+    }, true);
 
-window.onerror = function(msg, ...args) {
-    if (typeof msg === 'string' && msg.includes('ResizeObserver')) {
-        return true;
-    }
-    return false;
-};
+    window.onerror = function(msg, ...args) {
+        if (typeof msg === 'string' && msg.includes('ResizeObserver')) {
+            return true;
+        }
+        return false;
+    };
 
-window.addEventListener('unhandledrejection', (e) => {
-    if (e.reason && e.reason.message && (e.reason.message.includes('ResizeObserver loop') || e.reason.message.includes('ResizeObserver'))) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-    }
-});
+    window.addEventListener('unhandledrejection', (e) => {
+        if (e.reason && e.reason.message && (e.reason.message.includes('ResizeObserver loop') || e.reason.message.includes('ResizeObserver'))) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+        }
+    });
+}
 
 bootstrapApplication(App, appConfig).catch((err) => console.error(err));
 

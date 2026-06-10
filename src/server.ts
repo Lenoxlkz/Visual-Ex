@@ -12,6 +12,16 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 const angularApp = new AngularNodeAppEngine();
 
+app.use(express.json());
+app.post('/api/log', (req, res) => {
+    console.error("CLIENT-SIDE LOG:", req.body);
+    import('fs').then(fs => {
+        fs.appendFileSync('client-error.log', JSON.stringify(req.body) + '\n');
+    });
+    res.json({ok: true});
+});
+
+
 /**
  * Example Express Rest API endpoints can be defined here.
  * Uncomment and define endpoints as necessary.
