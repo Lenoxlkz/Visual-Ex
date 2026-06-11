@@ -160,6 +160,7 @@ export class SyncService {
           input.webkitdirectory = true;
           (input as any).directory = true;
           input.multiple = true;
+          input.accept = '.epub,.pdf,.docx,.doc,.cbz,.cbr,.rar,.zip,.png,.jpg,.jpeg';
           
           input.onchange = (e: any) => {
               const files = e.target.files;
@@ -318,7 +319,7 @@ export class SyncService {
            try {
                const file = await entry.getFile();
                const extension = file.name.split('.').pop()?.toLowerCase();
-               const supportedExtensions = ['epub', 'pdf', 'docx', 'doc', 'cbz', 'cbr', 'rar', 'zip'];
+               const supportedExtensions = ['epub', 'pdf', 'docx', 'doc', 'cbz', 'cbr', 'rar', 'zip', 'png', 'jpg', 'jpeg'];
                if (extension && supportedExtensions.includes(extension)) {
                   const existingItem = currentDbFiles.find(f => f.name === file.name && f.type === 'file');
                   
@@ -372,7 +373,7 @@ export class SyncService {
          }
 
          const extension = fileName.split('.').pop()?.toLowerCase();
-         const supportedExtensions = ['epub', 'pdf', 'docx', 'doc', 'cbz', 'cbr', 'rar', 'zip'];
+         const supportedExtensions = ['epub', 'pdf', 'docx', 'doc', 'cbz', 'cbr', 'rar', 'zip', 'png', 'jpg', 'jpeg'];
          if (!extension || !supportedExtensions.includes(extension)) continue;
 
          let currentParentId = rootParentId;
