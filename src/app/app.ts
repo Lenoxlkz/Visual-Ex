@@ -24,8 +24,8 @@ import { SyncService } from './services/sync.service';
         <router-outlet></router-outlet>
         <app-welcome-modal></app-welcome-modal>
         <app-nav></app-nav>
-        ?if (progressService.state().visible) {
-           <div class="fixed top-4 left-1/2 -translate-x-1/2 z[200] max-w-sm w-[90%] bg-white/80 dark:bg-[111]/80 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-2xl p-4 shadow-2xl flex flex-col gap-2">
+        @if (progressService.state().visible) {
+           <div class="fixed top-4 left-1/2 -translate-x-1/2 z-[200] max-w-sm w-[90%] bg-white/80 dark:bg-[#111]/80 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-2xl p-4 shadow-2xl flex flex-col gap-2">
               <div class="flex justify-between items-center text-sm font-medium">
                  <span class="text-slate-700 dark:text-slate-200 truncate">{{ progressService.state().message }}</span>
                  <span class="text-blue-600 dark:text-blue-400 font-mono">{{ progressService.state().percentage }}%</span>
