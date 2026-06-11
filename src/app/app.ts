@@ -3,6 +3,7 @@ import { RouterOutlet, Router, ActivatedRoute } from '@angular/router';
 import { ConfigService } from './services/config.service';
 import { WelcomeModalComponent } from './components/ui/welcome-modal.component';
 import { NavComponent } from './components/ui/nav.component';
+import { ProgressService } from './services/progress.service';
 
 import { SyncService } from './services/sync.service';
 
@@ -23,11 +24,24 @@ import { SyncService } from './services/sync.service';
         <router-outlet></router-outlet>
         <app-welcome-modal></app-welcome-modal>
         <app-nav></app-nav>
+        ?if (progressService.state().visible) {
+           <div class="fixed top-4 left-1/2 -translate-x-1/2 z[200] max-w-sm w-[90%] bg-white/80 dark:bg-[111]/80 backdrop-blur-xl border border-slate-200/50 dark:border-white/10 rounded-2xl p-4 shadow-2xl flex flex-col gap-2">
+              <div class="flex justify-between items-center text-sm font-medium">
+                 <span class="text-slate-700 dark:text-slate-200 truncate">{{ progressService.state().message }}</span>
+                 <span class="text-blue-600 dark:text-blue-400 font-mono">{{ progressService.state().percentage }}%</span>
+              </div>
+              <div class="w-full bg-slate-100 dark:bg-white/10 rounded-full h-2 overflow-hidden">
+                 <div class="h-full bg-blue-500 rounded-full transition-all duration-300" [style.width.%]="progressService.state().percentage"></div>
+              </div>
+              <div class="text-xs text-slate-500 dark:text-slate-400 text-right">{{ progressService.state().current }} / {{ progressService.state().total }}</div>
+           </div>
+        }
       </div>
     </div>
   `
 })
-export class App {
+export class App  {
+  progressService = inject(ProgressService);
   config = inject(ConfigService);
   private router = inject(Router);
   private activatedRoute = inject(ActivatedRoute);

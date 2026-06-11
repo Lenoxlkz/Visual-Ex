@@ -1,3 +1,4 @@
+import { ProgressService } from './progress.service';
 import { Injectable, inject, signal, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { FileService } from './file.service';
@@ -7,6 +8,7 @@ export type SyncInterval = 'off' | '6h' | '12h' | '24h' | '32h' | '48h' | '7d' |
 @Injectable({ providedIn: 'root' })
 export class SyncService {
   fileService = inject(FileService);
+  progressService = inject(ProgressService);
 
   syncIntervals: SyncInterval[] = ['off', '6h', '12h', '24h', '32h', '48h', '7d', '15d', '30d', '60d', '90d'];
   individualIntervalIndex = signal<number>(0);
@@ -344,6 +346,8 @@ export class SyncService {
 
   private async syncDirectoryToLibrary(directoryHandle: any, parentId: string) {
      const descargasId = await this.getOrCreateDescargasFolder(parentId);
+     this.progressService.show('Sincronizando directorio...', 100);
+     let scannedFiles = 0;
      const processedIds = new Set<string>();
      const formatSubfolders = new Map<string, string>();
      processedIds.add(descargasId);
@@ -368,6 +372,8 @@ export class SyncService {
                          const existingItem = currentDbFiles.find(f => f.name === file.name && f.type === 'file');
                          
                          if (!existingItem) {
+                             scannedFiles++;
+                             this.progressService.update(scannedFiles, 'Sincronizando ' + file.name + '...');
                              const id = await this.fileService.storeFile(file, formatFolderId);
                              processedIds.add(id);
                          } else if (existingItem.size !== file.size) {
@@ -389,6 +395,7 @@ export class SyncService {
      };
 
      await processDirectory(directoryHandle);
+     this.progressService.hide();
      await this.cleanupMissingFiles(descargasId, processedIds);
   }
 
@@ -405,6 +412,8 @@ export class SyncService {
 
   private async syncFallbackFilesToLibrary(files: File[], rootParentId: string) {
      const descargasId = await this.getOrCreateDescargasFolder(rootParentId);
+     this.progressService.show('Sincronizando archivos...', files.length);
+     let currentFileIndex = 0;
      const processedIds = new Set<string>();
      const formatSubfolders = new Map<string, string>();
      processedIds.add(descargasId);
@@ -433,6 +442,8 @@ export class SyncService {
          const existingFile = finalChildren.find(f => f.type === 'file' && f.name === fileName);
 
          if (!existingFile) {
+             currentFileIndex++;
+             this.progressService.update(currentFileIndex, 'Sincronizando ' + file.name + '...');
              const newFile = new File([file], fileName, { type: file.type });
              const id = await this.fileService.storeFile(newFile, formatFolderId);
              processedIds.add(id);

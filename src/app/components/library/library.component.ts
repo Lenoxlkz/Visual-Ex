@@ -1,3 +1,4 @@
+import { ProgressService } from '../../services/progress.service';
 import { Component, inject, computed, signal, effect, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, ActivatedRoute } from '@angular/router';
@@ -180,6 +181,7 @@ import { ConfigService } from '../../services/config.service';
 export class LibraryComponent implements OnInit {
   lang = inject(LangService);
   fileService = inject(FileService);
+  progressService = inject(ProgressService);
   router = inject(Router);
   route = inject(ActivatedRoute);
   config = inject(ConfigService);
@@ -256,6 +258,8 @@ export class LibraryComponent implements OnInit {
      // Handle webkitdirectory paths (e.g. folder/subfolder/file.txt)
      // We need to create the virtual folders iteratively.
      const files = Array.from(input.files);
+     this.progressService.show('Subiendo archivos...', files.length);
+     let currentFileIndex = 0;
      const folderCache = new Map<string, string>();
      const baseParentId = this.currentParentId(); // Capture base parent ID once
 
@@ -293,12 +297,17 @@ export class LibraryComponent implements OnInit {
                }
            }
            await this.fileService.storeFile(file, currentFolder);
+           currentFileIndex++;
+           this.progressService.update(currentFileIndex, 'Subiendo ' + file.name + '...');
         } else {
            await this.fileService.storeFile(file, baseParentId);
+           currentFileIndex++;
+           this.progressService.update(currentFileIndex, 'Subiendo ' + file.name + '...');
         }
      }
      
      input.value = ''; // reset
+     this.progressService.hide();
   }
 
   isConverting = signal(false);
