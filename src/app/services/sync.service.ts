@@ -135,6 +135,7 @@ export class SyncService {
       } catch (e) {
           console.error("Periodic sync failed", e);
       } finally {
+          this.progressService.hide();
           this.isLoading.set(false);
       }
   }
@@ -240,6 +241,7 @@ export class SyncService {
           alert('Error al iniciar sincronización: ' + e.message);
       }
     } finally {
+      this.progressService.hide();
       this.isLoading.set(false);
     }
   }
@@ -292,6 +294,7 @@ export class SyncService {
           alert('Error al iniciar sincronización: ' + e.message);
       }
     } finally {
+      this.progressService.hide();
       this.isLoading.set(false);
     }
   }
@@ -397,6 +400,7 @@ export class SyncService {
      await processDirectory(directoryHandle);
      this.progressService.hide();
      await this.cleanupMissingFiles(descargasId, processedIds);
+     this.progressService.hide();
   }
 
   private async cleanupMissingFiles(folderId: string, processedIds: Set<string>) {
@@ -457,5 +461,6 @@ export class SyncService {
          }
      }
      await this.cleanupMissingFiles(descargasId, processedIds);
+     this.progressService.hide();
   }
 }

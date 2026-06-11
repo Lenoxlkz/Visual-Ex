@@ -28,7 +28,7 @@ export class GlassCardComponent {
     this.holdTimeout = setTimeout(() => {
       this.wasHeld = true;
       this.held.emit();
-    }, 1700); // 1700ms for long press
+    }, 950); // 950ms for long press
   }
 
   endHold() {
