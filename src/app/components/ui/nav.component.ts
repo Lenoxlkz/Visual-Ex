@@ -85,33 +85,88 @@ import { MatIconModule } from '@angular/material/icon';
             </div>
 
             <!-- Google Drive Setting -->
-            <div class="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-4 mt-2">
-               <div class="flex items-center gap-3 text-slate-700 dark:text-slate-300">
-                  <div class="p-2 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center">
-                     <mat-icon class="scale-90 text-blue-500">cloud</mat-icon>
-                  </div>
-                  <div class="flex flex-col">
-                     <span class="text-sm font-medium">Google Drive</span>
-                     <span class="text-[10px] text-slate-500 dark:text-slate-400">
-                        @if(authService.user()) {
-                           {{ authService.user()?.email }}
-                        } @else {
-                           No conectado
+            <div class="flex flex-col border-t border-slate-100 dark:border-white/5 pt-4 mt-2 transition-all">
+               <div class="flex items-center justify-between">
+                   <div class="flex items-center gap-3 text-slate-700 dark:text-slate-300">
+                      <div class="p-2 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center">
+                         <mat-icon class="scale-90 text-blue-500">cloud</mat-icon>
+                      </div>
+                      <div class="flex flex-col">
+                         <span class="text-sm font-medium">Google Drive</span>
+                         <span class="text-[10px] text-slate-500 dark:text-slate-400">
+                            @if(authService.user()) {
+                               {{ authService.user()?.email }}
+                            } @else {
+                               No conectado
+                            }
+                         </span>
+                      </div>
+                   </div>
+                   @if(authService.user()) {
+                     <button (click)="authService.signOut()" class="flex items-center justify-center min-w-16 gap-1.5 px-3 py-2 rounded-full bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors text-red-600 dark:text-red-400">
+                        <span class="text-xs font-medium">Cerrar Sesión</span>
+                     </button>
+                   } @else {
+                     <button (click)="authService.signIn()" [disabled]="authService.isLoggingIn()" class="flex items-center justify-center min-w-16 gap-1.5 px-3 py-2 rounded-full bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors text-blue-600 dark:text-blue-400 disabled:opacity-50">
+                        @if(authService.isLoggingIn()) {
+                          <mat-icon class="scale-75 animate-spin">refresh</mat-icon>
                         }
-                     </span>
-                  </div>
+                        <span class="text-xs font-medium">Conectar</span>
+                     </button>
+                   }
                </div>
+
+               <!-- Drive Control Panel -->
                @if(authService.user()) {
-                 <button (click)="authService.signOut()" class="flex items-center justify-center min-w-16 gap-1.5 px-3 py-2 rounded-full bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors text-red-600 dark:text-red-400">
-                    <span class="text-xs font-medium">Cerrar Sesión</span>
-                 </button>
-               } @else {
-                 <button (click)="authService.signIn()" [disabled]="authService.isLoggingIn()" class="flex items-center justify-center min-w-16 gap-1.5 px-3 py-2 rounded-full bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors text-blue-600 dark:text-blue-400 disabled:opacity-50">
-                    @if(authService.isLoggingIn()) {
-                      <mat-icon class="scale-75 animate-spin">refresh</mat-icon>
-                    }
-                    <span class="text-xs font-medium">Conectar</span>
-                 </button>
+                   <div class="w-full relative mt-2 flex flex-col items-center">
+                       <!-- Toggle Button -->
+                       <button (click)="drivePanelOpen.set(!drivePanelOpen())" 
+                               class="w-16 h-4 mt-1 bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 rounded-full flex items-center justify-center transition-colors">
+                           <mat-icon class="text-[16px] w-[16px] h-[16px] flex items-center justify-center text-slate-500 dark:text-slate-400">
+                               {{ drivePanelOpen() ? 'expand_more' : 'expand_less' }}
+                           </mat-icon>
+                       </button>
+
+                       <div class="w-full overflow-hidden transition-all duration-300 ease-in-out" 
+                            [class.max-h-0]="!drivePanelOpen()" 
+                            [class.opacity-0]="!drivePanelOpen()" 
+                            [class.max-h-64]="drivePanelOpen()" 
+                            [class.opacity-100]="drivePanelOpen()">
+                           <div class="p-3 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-2xl flex flex-col gap-3 mt-1">
+                               <!-- Import Toggle -->
+                               <div class="flex items-center justify-between">
+                                   <div class="flex flex-col">
+                                      <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                          <mat-icon class="scale-75 text-emerald-500">download</mat-icon> Importar
+                                      </span>
+                                      <span class="text-[10px] text-slate-500 dark:text-slate-400">Lee y descarga archivos</span>
+                                      @if(importProgress()) {
+                                          <span class="text-[9px] text-emerald-600 dark:text-emerald-400 mt-0.5">{{ importProgress() }}</span>
+                                      }
+                                   </div>
+                                   <button (click)="toggleImport()" [class.bg-emerald-500]="driveImporting()" [class.bg-slate-300]="!driveImporting()" [class.dark:bg-white/20]="!driveImporting()" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out">
+                                      <span class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" [class.translate-x-4]="driveImporting()" [class.translate-x-0]="!driveImporting()"></span>
+                                   </button>
+                               </div>
+                               <div class="w-full h-px bg-slate-200 dark:bg-white/10"></div>
+                               <!-- Export Toggle -->
+                               <div class="flex items-center justify-between">
+                                   <div class="flex flex-col">
+                                      <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                          <mat-icon class="scale-75 text-amber-500">upload</mat-icon> Exportar
+                                      </span>
+                                      <span class="text-[10px] text-slate-500 dark:text-slate-400">Sube un respaldo de datos</span>
+                                      @if(exportProgress()) {
+                                          <span class="text-[9px] text-amber-600 dark:text-amber-400 mt-0.5">{{ exportProgress() }}</span>
+                                      }
+                                   </div>
+                                   <button (click)="toggleExport()" [class.bg-amber-500]="driveExporting()" [class.bg-slate-300]="!driveExporting()" [class.dark:bg-white/20]="!driveExporting()" class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out">
+                                      <span class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" [class.translate-x-4]="driveExporting()" [class.translate-x-0]="!driveExporting()"></span>
+                                   </button>
+                               </div>
+                           </div>
+                       </div>
+                   </div>
                }
             </div>
 
@@ -301,6 +356,12 @@ export class NavComponent {
   reportModalOpen = signal(false);
   syncModalOpen = signal(false);
 
+  drivePanelOpen = signal(false);
+  driveImporting = signal(false);
+  driveExporting = signal(false);
+  importProgress = signal('');
+  exportProgress = signal('');
+
   constructor() {
     effect(() => {
        if (this.syncService.triggerSyncUI() > 0) {
@@ -365,53 +426,72 @@ export class NavComponent {
      this.config.cycleScale();
   }
 
-  async backupToDrive() {
+  async toggleExport() {
+    if (this.driveExporting()) {
+       this.driveExporting.set(false);
+       this.exportProgress.set('Cancelado');
+       setTimeout(() => { if(this.exportProgress() === 'Cancelado') this.exportProgress.set(''); }, 3000);
+       return;
+    }
+    this.driveExporting.set(true);
+    this.exportProgress.set('Preparando...');
+    
     try {
-       if (!confirm(this.lang.t('Drive_Backup_Confirm') || 'Backup library to Google Drive?')) return;
-       this.settingsOpen.set(false);
        const folderId = await this.driveService.getOrCreateBackupFolder();
        const files = await this.fileService.getFilesByParent('root');
        const allFiles: any[] = [];
        const gatherFiles = async (parentId: string, path: string) => {
           const children = await this.fileService.getFilesByParent(parentId);
           for (const c of children) {
+             if (c.type === 'folder' && c.name === 'Google Drive Import') continue;
              if (c.type === 'file') allFiles.push({ ...c, path: path + c.name });
              else if (c.type === 'folder') await gatherFiles(c.id, path + c.name + '/');
           }
        };
        await gatherFiles('root', '');
        
-       this.progressService.show(this.lang.t('Backup Uploading') || 'Uploading to Drive', allFiles.length);
        let count = 0;
        for (const f of allFiles) {
+          if (!this.driveExporting()) break;
           count++;
-          this.progressService.update(count, 'Uploading ' + f.name);
+          this.exportProgress.set(`Subiendo ${count}/${allFiles.length}...`);
           const blob = await this.fileService.getFileContent(f.id);
           if (blob) {
               await this.driveService.uploadFile(blob, f.path || f.name, folderId);
           }
        }
-       this.progressService.hide();
-       alert('Backup complete!');
+       if (this.driveExporting()) {
+          this.exportProgress.set('¡Completado!');
+          setTimeout(() => { if(this.exportProgress() === '¡Completado!') this.exportProgress.set(''); }, 3000);
+       }
     } catch (e) {
-       this.progressService.hide();
        console.error(e);
-       alert('Backup failed: ' + e);
+       this.exportProgress.set('Fallo la exportación');
+       setTimeout(() => { if(this.exportProgress() === 'Fallo la exportación') this.exportProgress.set(''); }, 3000);
+    } finally {
+       this.driveExporting.set(false);
     }
   }
 
-  async importFromDrive() {
+  async toggleImport() {
+    if (this.driveImporting()) {
+       this.driveImporting.set(false);
+       this.importProgress.set('Cancelado');
+       setTimeout(() => { if(this.importProgress() === 'Cancelado') this.importProgress.set(''); }, 3000);
+       return;
+    }
+    this.driveImporting.set(true);
+    this.importProgress.set('Buscando archivos...');
+    
     try {
-       if (!confirm(this.lang.t('Drive_Import_Confirm') || 'Import compatible files from Google Drive?')) return;
-       this.settingsOpen.set(false);
-       this.progressService.show(this.lang.t('Drive Searching') || 'Searching files...', 100);
        const driveFiles = await this.driveService.listFiles();
        const supportedTypes = ['pdf', 'epub', 'docx', 'doc', 'cbr', 'cbz', 'zip', 'rar', 'jpg', 'jpeg', 'png', 'webp'];
        const toImport = driveFiles.filter(f => supportedTypes.some(ext => f.name.toLowerCase().endsWith('.' + ext)));
        
        if (toImport.length === 0) {
-           this.progressService.hide();
-           alert('No compatible files found in Drive.');
+           this.importProgress.set('No hay archivos compatibles');
+           this.driveImporting.set(false);
+           setTimeout(() => { if(this.importProgress() === 'No hay archivos compatibles') this.importProgress.set(''); }, 3000);
            return;
        }
 
@@ -420,23 +500,28 @@ export class NavComponent {
        let gdFolderId = gdFolder?.id;
        if (!gdFolderId) gdFolderId = await this.fileService.createFolder('Google Drive Import', 'root');
        
-       this.progressService.show(this.lang.t('Drive Importing') || 'Importing from Drive...', toImport.length);
        let count = 0;
        for (const f of toImport) {
+          if (!this.driveImporting()) break;
           count++;
-          this.progressService.update(count, 'Importing ' + f.name);
+          this.importProgress.set(`Importando ${count}/${toImport.length}...`);
           const existing = await this.fileService.getFilesByParent(gdFolderId!);
           if (!existing.some(e => e.name === f.name)) {
               const blob = await this.driveService.downloadFile(f.id);
+              if (!this.driveImporting()) break;
               await this.fileService.storeFile(new File([blob], f.name, { type: f.mimeType }), gdFolderId!);
           }
        }
-       this.progressService.hide();
-       alert('Import complete!');
+       if (this.driveImporting()) {
+           this.importProgress.set('¡Completado!');
+           setTimeout(() => { if(this.importProgress() === '¡Completado!') this.importProgress.set(''); }, 3000);
+       }
     } catch (e) {
-       this.progressService.hide();
        console.error(e);
-       alert('Import failed: ' + e);
+       this.importProgress.set('Fallo la importación');
+       setTimeout(() => { if(this.importProgress() === 'Fallo la importación') this.importProgress.set(''); }, 3000);
+    } finally {
+       this.driveImporting.set(false);
     }
   }
 
