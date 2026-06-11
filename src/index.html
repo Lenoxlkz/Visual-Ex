@@ -53,7 +53,7 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/pwabuilder-sw.js').then(async (registration) => {
+          navigator.serviceWorker.register('/pwabuilder-sw.js?v=' + Date.now()).then(async (registration) => {
             console.log('ServiceWorker registration successful with scope: ', registration.scope);
             
             // Background Sync Registration

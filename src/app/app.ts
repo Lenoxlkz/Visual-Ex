@@ -58,6 +58,14 @@ export class App  {
          // Could fetch the open url here if needed, but launch queue handles typical PWA share
       }
     });
+
+    if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+       navigator.serviceWorker.addEventListener('message', (event) => {
+          if (event.data && event.data.type === 'TRIGGER_BACKGROUND_SYNC') {
+             this.syncService.runPeriodicSync();
+          }
+       });
+    }
   }
 }
 

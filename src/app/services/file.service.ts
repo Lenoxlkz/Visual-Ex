@@ -10,6 +10,7 @@ export interface AppFile {
   extension?: string;
   mimeType?: string;
   size?: number;
+  lastModified?: number;
   parentId: string; // use "root" instead of null
   createdAt: number;
   lastOpened?: number;
@@ -185,6 +186,7 @@ export class FileService {
       extension,
       mimeType: file.type,
       size: file.size,
+      lastModified: file.lastModified,
       parentId,
       createdAt: Date.now()
     });

@@ -112,7 +112,7 @@ export class SyncService {
      }
   }
 
-  private async runPeriodicSync() {
+  async runPeriodicSync() {
       if (!this.currentHandle || this.currentHandle === 'fallback_individual' || this.currentHandle === 'fallback_total') return;
       if (this.isLoading()) return;
 
@@ -379,7 +379,7 @@ export class SyncService {
                              this.progressService.update(scannedFiles, 'Sincronizando ' + file.name + '...');
                              const id = await this.fileService.storeFile(file, formatFolderId);
                              processedIds.add(id);
-                         } else if (existingItem.size !== file.size) {
+                         } else if (existingItem.size !== file.size || existingItem.lastModified !== file.lastModified) {
                              await this.fileService.deleteItem(existingItem.id);
                              const id = await this.fileService.storeFile(file, formatFolderId);
                              processedIds.add(id);
