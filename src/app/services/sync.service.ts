@@ -310,59 +310,104 @@ export class SyncService {
     this.setupPeriodicTimer();
   }
 
+  private async getOrCreateDescargasFolder(rootParentId: string): Promise<string> {
+      const children = await this.fileService.getFilesByParent(rootParentId);
+      let descargas = children.find(f => f.type === 'folder' && f.name === 'Descargas');
+      if (!descargas) {
+          return await this.fileService.createFolder('Descargas', rootParentId);
+      }
+      return descargas.id;
+  }
+
+  private async getOrCreateFormatFolder(descargasId: string, formatName: string): Promise<string> {
+      const children = await this.fileService.getFilesByParent(descargasId);
+      let folder = children.find(f => f.type === 'folder' && f.name === formatName);
+      if (!folder) {
+          return await this.fileService.createFolder(formatName, descargasId);
+      }
+      return folder.id;
+  }
+
+  private getFormatFolderName(extension: string): string {
+      switch(extension) {
+          case 'docx': case 'doc': return 'Word';
+          case 'pdf': return 'PDFs';
+          case 'epub': return 'ePubs';
+          case 'cbz': case 'cbr': return 'Comics';
+          case 'rar': return 'RAR';
+          case 'zip': return 'ZIP';
+          case 'png': return 'PNG';
+          case 'jpg': case 'jpeg': return 'JPG';
+          default: return 'Otros';
+      }
+  }
+
   private async syncDirectoryToLibrary(directoryHandle: any, parentId: string) {
-     const currentDbFiles = await this.fileService.getFilesByParent(parentId);
+     const descargasId = await this.getOrCreateDescargasFolder(parentId);
      const processedIds = new Set<string>();
+     const formatSubfolders = new Map<string, string>();
+     processedIds.add(descargasId);
 
-     for await (const entry of directoryHandle.values()) {
-        if (entry.kind === 'file') {
-           try {
-               const file = await entry.getFile();
-               const extension = file.name.split('.').pop()?.toLowerCase();
-               const supportedExtensions = ['epub', 'pdf', 'docx', 'doc', 'cbz', 'cbr', 'rar', 'zip', 'png', 'jpg', 'jpeg'];
-               if (extension && supportedExtensions.includes(extension)) {
-                  const existingItem = currentDbFiles.find(f => f.name === file.name && f.type === 'file');
-                  
-                  if (!existingItem) {
-                    const id = await this.fileService.storeFile(file, parentId);
-                    processedIds.add(id);
-                  } else if (existingItem.size !== file.size) {
-                    // File exists but size differs, meaning it was modified
-                    await this.fileService.deleteItem(existingItem.id);
-                    const id = await this.fileService.storeFile(file, parentId);
-                    processedIds.add(id);
-                  } else {
-                    processedIds.add(existingItem.id);
-                  }
-               }
-           } catch(e) {
-               console.error('Failed to sync file', entry.name, e);
-           }
-        } else if (entry.kind === 'directory') {
-           // Skip hidden or system folders to prevent infinite loops or hangs in root
-           if (entry.name.startsWith('.') || entry.name.toLowerCase() === 'windows' || entry.name.toLowerCase() === 'system32' || entry.name.toLowerCase() === 'node_modules') continue;
-           
-           let folderId = currentDbFiles.find(f => f.name === entry.name && f.type === 'folder')?.id;
-           if (!folderId) {
-              folderId = await this.fileService.createFolder(entry.name, parentId);
-           }
-           processedIds.add(folderId);
-           await this.syncDirectoryToLibrary(entry, folderId);
-        }
-     }
+     const processDirectory = async (handle: any) => {
+         for await (const entry of handle.values()) {
+             if (entry.kind === 'file') {
+                 try {
+                     const file = await entry.getFile();
+                     const extension = file.name.split('.').pop()?.toLowerCase();
+                     const supportedExtensions = ['epub', 'pdf', 'docx', 'doc', 'cbz', 'cbr', 'rar', 'zip', 'png', 'jpg', 'jpeg'];
+                     if (extension && supportedExtensions.includes(extension)) {
+                         const formatName = this.getFormatFolderName(extension);
+                         let formatFolderId = formatSubfolders.get(formatName);
+                         if (!formatFolderId) {
+                             formatFolderId = await this.getOrCreateFormatFolder(descargasId, formatName);
+                             formatSubfolders.set(formatName, formatFolderId);
+                             processedIds.add(formatFolderId);
+                         }
 
-     // Delete files that are in Library but no longer on the disk
-     for (const dbFile of currentDbFiles) {
-        if (!processedIds.has(dbFile.id)) {
-            await this.fileService.deleteItem(dbFile.id);
-        }
-     }
+                         const currentDbFiles = await this.fileService.getFilesByParent(formatFolderId);
+                         const existingItem = currentDbFiles.find(f => f.name === file.name && f.type === 'file');
+                         
+                         if (!existingItem) {
+                             const id = await this.fileService.storeFile(file, formatFolderId);
+                             processedIds.add(id);
+                         } else if (existingItem.size !== file.size) {
+                             await this.fileService.deleteItem(existingItem.id);
+                             const id = await this.fileService.storeFile(file, formatFolderId);
+                             processedIds.add(id);
+                         } else {
+                             processedIds.add(existingItem.id);
+                         }
+                     }
+                 } catch(e) {
+                     console.error('Failed to sync file', entry.name, e);
+                 }
+             } else if (entry.kind === 'directory') {
+                 if (entry.name.startsWith('.') || entry.name.toLowerCase() === 'windows' || entry.name.toLowerCase() === 'system32' || entry.name.toLowerCase() === 'node_modules') continue;
+                 await processDirectory(entry);
+             }
+         }
+     };
+
+     await processDirectory(directoryHandle);
+     await this.cleanupMissingFiles(descargasId, processedIds);
+  }
+
+  private async cleanupMissingFiles(folderId: string, processedIds: Set<string>) {
+      const children = await this.fileService.getFilesByParent(folderId);
+      for (const child of children) {
+          if (!processedIds.has(child.id)) {
+              await this.fileService.deleteItem(child.id);
+          } else if (child.type === 'folder') {
+              await this.cleanupMissingFiles(child.id, processedIds);
+          }
+      }
   }
 
   private async syncFallbackFilesToLibrary(files: File[], rootParentId: string) {
+     const descargasId = await this.getOrCreateDescargasFolder(rootParentId);
      const processedIds = new Set<string>();
-     const folderCache = new Map<string, string>();
-     folderCache.set('', rootParentId);
+     const formatSubfolders = new Map<string, string>();
+     processedIds.add(descargasId);
 
      for (const file of files) {
          const pathParts = (file.webkitRelativePath || file.name).split('/');
@@ -376,42 +421,30 @@ export class SyncService {
          const supportedExtensions = ['epub', 'pdf', 'docx', 'doc', 'cbz', 'cbr', 'rar', 'zip', 'png', 'jpg', 'jpeg'];
          if (!extension || !supportedExtensions.includes(extension)) continue;
 
-         let currentParentId = rootParentId;
-         let accumulatedPath = '';
-
-         for (const folderName of pathParts) {
-             accumulatedPath = accumulatedPath ? `${accumulatedPath}/${folderName}` : folderName;
-             if (folderCache.has(accumulatedPath)) {
-                 currentParentId = folderCache.get(accumulatedPath)!;
-             } else {
-                 const children = await this.fileService.getFilesByParent(currentParentId);
-                 let folder = children.find(f => f.type === 'folder' && f.name === folderName);
-                 if (!folder) {
-                     const id = await this.fileService.createFolder(folderName, currentParentId);
-                     folderCache.set(accumulatedPath, id);
-                     currentParentId = id;
-                 } else {
-                     folderCache.set(accumulatedPath, folder.id);
-                     currentParentId = folder.id;
-                 }
-             }
+         const formatName = this.getFormatFolderName(extension);
+         let formatFolderId = formatSubfolders.get(formatName);
+         if (!formatFolderId) {
+             formatFolderId = await this.getOrCreateFormatFolder(descargasId, formatName);
+             formatSubfolders.set(formatName, formatFolderId);
+             processedIds.add(formatFolderId);
          }
 
-         const finalChildren = await this.fileService.getFilesByParent(currentParentId);
+         const finalChildren = await this.fileService.getFilesByParent(formatFolderId);
          const existingFile = finalChildren.find(f => f.type === 'file' && f.name === fileName);
 
          if (!existingFile) {
              const newFile = new File([file], fileName, { type: file.type });
-             const id = await this.fileService.storeFile(newFile, currentParentId);
+             const id = await this.fileService.storeFile(newFile, formatFolderId);
              processedIds.add(id);
          } else if (existingFile.size !== file.size) {
              await this.fileService.deleteItem(existingFile.id);
              const newFile = new File([file], fileName, { type: file.type });
-             const id = await this.fileService.storeFile(newFile, currentParentId);
+             const id = await this.fileService.storeFile(newFile, formatFolderId);
              processedIds.add(id);
          } else {
              processedIds.add(existingFile.id);
          }
      }
+     await this.cleanupMissingFiles(descargasId, processedIds);
   }
 }
