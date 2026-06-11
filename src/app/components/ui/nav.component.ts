@@ -6,7 +6,11 @@ import { Title } from '@angular/platform-browser';
 import { ThemeService, Theme } from '../../services/theme.service';
 import { LangService } from '../../services/lang.service';
 import { ConfigService } from '../../services/config.service';
+import { FileService } from '../../services/file.service';
+import { ProgressService } from '../../services/progress.service';
 import { SyncService } from '../../services/sync.service';
+import { GoogleAuthService } from '../../services/google-auth.service';
+import { GoogleDriveService } from '../../services/google-drive.service';
 import { MatIconModule } from '@angular/material/icon';
 
 @Component({
@@ -78,6 +82,37 @@ import { MatIconModule } from '@angular/material/icon';
                <button (click)="config.cycleNextFileBehavior()" class="flex items-center justify-center min-w-16 gap-1.5 px-3 py-2 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 transition-colors text-slate-800 dark:text-slate-200">
                   <span class="text-xs font-medium">{{ nextFileText() }}</span>
                </button>
+            </div>
+
+            <!-- Google Drive Setting -->
+            <div class="flex items-center justify-between border-t border-slate-100 dark:border-white/5 pt-4 mt-2">
+               <div class="flex items-center gap-3 text-slate-700 dark:text-slate-300">
+                  <div class="p-2 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center">
+                     <mat-icon class="scale-90 text-blue-500">cloud</mat-icon>
+                  </div>
+                  <div class="flex flex-col">
+                     <span class="text-sm font-medium">Google Drive</span>
+                     <span class="text-[10px] text-slate-500 dark:text-slate-400">
+                        @if(authService.user()) {
+                           {{ authService.user()?.email }}
+                        } @else {
+                           No conectado
+                        }
+                     </span>
+                  </div>
+               </div>
+               @if(authService.user()) {
+                 <button (click)="authService.signOut()" class="flex items-center justify-center min-w-16 gap-1.5 px-3 py-2 rounded-full bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors text-red-600 dark:text-red-400">
+                    <span class="text-xs font-medium">Cerrar Sesión</span>
+                 </button>
+               } @else {
+                 <button (click)="authService.signIn()" [disabled]="authService.isLoggingIn()" class="flex items-center justify-center min-w-16 gap-1.5 px-3 py-2 rounded-full bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors text-blue-600 dark:text-blue-400 disabled:opacity-50">
+                    @if(authService.isLoggingIn()) {
+                      <mat-icon class="scale-75 animate-spin">refresh</mat-icon>
+                    }
+                    <span class="text-xs font-medium">Conectar</span>
+                 </button>
+               }
             </div>
 
             <!-- Sync Setting -->
@@ -257,6 +292,10 @@ export class NavComponent {
   lang = inject(LangService);
   config = inject(ConfigService);
   syncService = inject(SyncService);
+  authService = inject(GoogleAuthService);
+  driveService = inject(GoogleDriveService);
+  fileService = inject(FileService);
+  progressService = inject(ProgressService);
   router = inject(Router);
   settingsOpen = signal(false);
   reportModalOpen = signal(false);
@@ -324,6 +363,81 @@ export class NavComponent {
 
   cycleScale() {
      this.config.cycleScale();
+  }
+
+  async backupToDrive() {
+    try {
+       if (!confirm(this.lang.t('Drive_Backup_Confirm') || 'Backup library to Google Drive?')) return;
+       this.settingsOpen.set(false);
+       const folderId = await this.driveService.getOrCreateBackupFolder();
+       const files = await this.fileService.getFilesByParent('root');
+       const allFiles: any[] = [];
+       const gatherFiles = async (parentId: string, path: string) => {
+          const children = await this.fileService.getFilesByParent(parentId);
+          for (const c of children) {
+             if (c.type === 'file') allFiles.push({ ...c, path: path + c.name });
+             else if (c.type === 'folder') await gatherFiles(c.id, path + c.name + '/');
+          }
+       };
+       await gatherFiles('root', '');
+       
+       this.progressService.show(this.lang.t('Backup Uploading') || 'Uploading to Drive', allFiles.length);
+       let count = 0;
+       for (const f of allFiles) {
+          count++;
+          this.progressService.update(count, 'Uploading ' + f.name);
+          const blob = await this.fileService.getFileContent(f.id);
+          if (blob) {
+              await this.driveService.uploadFile(blob, f.path || f.name, folderId);
+          }
+       }
+       this.progressService.hide();
+       alert('Backup complete!');
+    } catch (e) {
+       this.progressService.hide();
+       console.error(e);
+       alert('Backup failed: ' + e);
+    }
+  }
+
+  async importFromDrive() {
+    try {
+       if (!confirm(this.lang.t('Drive_Import_Confirm') || 'Import compatible files from Google Drive?')) return;
+       this.settingsOpen.set(false);
+       this.progressService.show(this.lang.t('Drive Searching') || 'Searching files...', 100);
+       const driveFiles = await this.driveService.listFiles();
+       const supportedTypes = ['pdf', 'epub', 'docx', 'doc', 'cbr', 'cbz', 'zip', 'rar', 'jpg', 'jpeg', 'png', 'webp'];
+       const toImport = driveFiles.filter(f => supportedTypes.some(ext => f.name.toLowerCase().endsWith('.' + ext)));
+       
+       if (toImport.length === 0) {
+           this.progressService.hide();
+           alert('No compatible files found in Drive.');
+           return;
+       }
+
+       const rootFiles = await this.fileService.getFilesByParent('root');
+       let gdFolder = rootFiles.find(f => f.type === 'folder' && f.name === 'Google Drive Import');
+       let gdFolderId = gdFolder?.id;
+       if (!gdFolderId) gdFolderId = await this.fileService.createFolder('Google Drive Import', 'root');
+       
+       this.progressService.show(this.lang.t('Drive Importing') || 'Importing from Drive...', toImport.length);
+       let count = 0;
+       for (const f of toImport) {
+          count++;
+          this.progressService.update(count, 'Importing ' + f.name);
+          const existing = await this.fileService.getFilesByParent(gdFolderId!);
+          if (!existing.some(e => e.name === f.name)) {
+              const blob = await this.driveService.downloadFile(f.id);
+              await this.fileService.storeFile(new File([blob], f.name, { type: f.mimeType }), gdFolderId!);
+          }
+       }
+       this.progressService.hide();
+       alert('Import complete!');
+    } catch (e) {
+       this.progressService.hide();
+       console.error(e);
+       alert('Import failed: ' + e);
+    }
   }
 
 

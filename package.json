@@ -28,6 +28,7 @@
     "@xmldom/xmldom": "^0.9.10",
     "epubjs": "^0.3.93",
     "express": "^5.1.0",
+    "firebase": "^12.14.0",
     "idb": "^8.0.3",
     "jszip": "^3.10.1",
     "mammoth": "^1.12.0",
