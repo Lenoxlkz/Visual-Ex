@@ -78,7 +78,23 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     'Sync Interval 30d': 'Cada 30 días',
     'Sync Interval 60d': 'Cada 60 días',
     'Sync Interval 90d': 'Cada 90 días',
-    'Not Allowed': 'No permitido'
+    'Not Allowed': 'No permitido',
+    'Drive Not Connected': 'No conectado',
+    'Drive Log Out': 'Cerrar Sesión',
+    'Drive Connect': 'Conectar',
+    'Drive Import': 'Importar',
+    'Drive Import Desc': 'Lee y descarga archivos',
+    'Drive Export': 'Exportar',
+    'Drive Export Desc': 'Sube un respaldo de datos',
+    'Drive Preparing': 'Preparando...',
+    'Drive Uploading': 'Subiendo',
+    'Drive Completed': '¡Completado!',
+    'Drive Failed Export': 'Falló la exportación',
+    'Drive Canceled': 'Cancelado',
+    'Drive Searching': 'Buscando archivos...',
+    'Drive No Compatible': 'No hay archivos compatibles',
+    'Drive Importing': 'Importando',
+    'Drive Failed Import': 'Falló la importación'
   },
   en: {
     'Library': 'Library',
@@ -154,7 +170,23 @@ const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     'Sync Interval 30d': 'Every 30 days',
     'Sync Interval 60d': 'Every 60 days',
     'Sync Interval 90d': 'Every 90 days',
-    'Not Allowed': 'Not allowed'
+    'Not Allowed': 'Not allowed',
+    'Drive Not Connected': 'Not connected',
+    'Drive Log Out': 'Log Out',
+    'Drive Connect': 'Connect',
+    'Drive Import': 'Import',
+    'Drive Import Desc': 'Reads and downloads files',
+    'Drive Export': 'Export',
+    'Drive Export Desc': 'Uploads a data backup',
+    'Drive Preparing': 'Preparing...',
+    'Drive Uploading': 'Uploading',
+    'Drive Completed': 'Completed!',
+    'Drive Failed Export': 'Export failed',
+    'Drive Canceled': 'Canceled',
+    'Drive Searching': 'Searching files...',
+    'Drive No Compatible': 'No compatible files found',
+    'Drive Importing': 'Importing',
+    'Drive Failed Import': 'Import failed'
   }
 };
 

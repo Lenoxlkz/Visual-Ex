@@ -97,21 +97,21 @@ import { MatIconModule } from '@angular/material/icon';
                             @if(authService.user()) {
                                {{ authService.user()?.email }}
                             } @else {
-                               No conectado
+                               {{ lang.t('Drive Not Connected') }}
                             }
                          </span>
                       </div>
                    </div>
                    @if(authService.user()) {
                      <button (click)="authService.signOut()" class="flex items-center justify-center min-w-16 gap-1.5 px-3 py-2 rounded-full bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors text-red-600 dark:text-red-400">
-                        <span class="text-xs font-medium">Cerrar Sesión</span>
+                        <span class="text-xs font-medium">{{ lang.t('Drive Log Out') }}</span>
                      </button>
                    } @else {
                      <button (click)="authService.signIn()" [disabled]="authService.isLoggingIn()" class="flex items-center justify-center min-w-16 gap-1.5 px-3 py-2 rounded-full bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors text-blue-600 dark:text-blue-400 disabled:opacity-50">
                         @if(authService.isLoggingIn()) {
                           <mat-icon class="scale-75 animate-spin">refresh</mat-icon>
                         }
-                        <span class="text-xs font-medium">Conectar</span>
+                        <span class="text-xs font-medium">{{ lang.t('Drive Connect') }}</span>
                      </button>
                    }
                </div>
@@ -137,9 +137,9 @@ import { MatIconModule } from '@angular/material/icon';
                                <div class="flex items-center justify-between">
                                    <div class="flex flex-col">
                                       <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                          <mat-icon class="scale-75 text-emerald-500">download</mat-icon> Importar
+                                          <mat-icon class="scale-75 text-emerald-500">download</mat-icon> {{ lang.t('Drive Import') }}
                                       </span>
-                                      <span class="text-[10px] text-slate-500 dark:text-slate-400">Lee y descarga archivos</span>
+                                      <span class="text-[10px] text-slate-500 dark:text-slate-400">{{ lang.t('Drive Import Desc') }}</span>
                                       @if(importProgress()) {
                                           <span class="text-[9px] text-emerald-600 dark:text-emerald-400 mt-0.5">{{ importProgress() }}</span>
                                       }
@@ -153,9 +153,9 @@ import { MatIconModule } from '@angular/material/icon';
                                <div class="flex items-center justify-between">
                                    <div class="flex flex-col">
                                       <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                                          <mat-icon class="scale-75 text-amber-500">upload</mat-icon> Exportar
+                                          <mat-icon class="scale-75 text-amber-500">upload</mat-icon> {{ lang.t('Drive Export') }}
                                       </span>
-                                      <span class="text-[10px] text-slate-500 dark:text-slate-400">Sube un respaldo de datos</span>
+                                      <span class="text-[10px] text-slate-500 dark:text-slate-400">{{ lang.t('Drive Export Desc') }}</span>
                                       @if(exportProgress()) {
                                           <span class="text-[9px] text-amber-600 dark:text-amber-400 mt-0.5">{{ exportProgress() }}</span>
                                       }
@@ -429,12 +429,12 @@ export class NavComponent {
   async toggleExport() {
     if (this.driveExporting()) {
        this.driveExporting.set(false);
-       this.exportProgress.set('Cancelado');
-       setTimeout(() => { if(this.exportProgress() === 'Cancelado') this.exportProgress.set(''); }, 3000);
+       this.exportProgress.set(this.lang.t('Drive Canceled'));
+       setTimeout(() => { if(this.exportProgress() === this.lang.t('Drive Canceled')) this.exportProgress.set(''); }, 3000);
        return;
     }
     this.driveExporting.set(true);
-    this.exportProgress.set('Preparando...');
+    this.exportProgress.set(this.lang.t('Drive Preparing'));
     
     try {
        const folderId = await this.driveService.getOrCreateBackupFolder();
@@ -454,20 +454,20 @@ export class NavComponent {
        for (const f of allFiles) {
           if (!this.driveExporting()) break;
           count++;
-          this.exportProgress.set(`Subiendo ${count}/${allFiles.length}...`);
+          this.exportProgress.set(`${this.lang.t('Drive Uploading')} ${count}/${allFiles.length}...`);
           const blob = await this.fileService.getFileContent(f.id);
           if (blob) {
               await this.driveService.uploadFile(blob, f.path || f.name, folderId);
           }
        }
        if (this.driveExporting()) {
-          this.exportProgress.set('¡Completado!');
-          setTimeout(() => { if(this.exportProgress() === '¡Completado!') this.exportProgress.set(''); }, 3000);
+          this.exportProgress.set(this.lang.t('Drive Completed'));
+          setTimeout(() => { if(this.exportProgress() === this.lang.t('Drive Completed')) this.exportProgress.set(''); }, 3000);
        }
     } catch (e) {
        console.error(e);
-       this.exportProgress.set('Fallo la exportación');
-       setTimeout(() => { if(this.exportProgress() === 'Fallo la exportación') this.exportProgress.set(''); }, 3000);
+       this.exportProgress.set(this.lang.t('Drive Failed Export'));
+       setTimeout(() => { if(this.exportProgress() === this.lang.t('Drive Failed Export')) this.exportProgress.set(''); }, 3000);
     } finally {
        this.driveExporting.set(false);
     }
@@ -476,12 +476,12 @@ export class NavComponent {
   async toggleImport() {
     if (this.driveImporting()) {
        this.driveImporting.set(false);
-       this.importProgress.set('Cancelado');
-       setTimeout(() => { if(this.importProgress() === 'Cancelado') this.importProgress.set(''); }, 3000);
+       this.importProgress.set(this.lang.t('Drive Canceled'));
+       setTimeout(() => { if(this.importProgress() === this.lang.t('Drive Canceled')) this.importProgress.set(''); }, 3000);
        return;
     }
     this.driveImporting.set(true);
-    this.importProgress.set('Buscando archivos...');
+    this.importProgress.set(this.lang.t('Drive Searching'));
     
     try {
        const driveFiles = await this.driveService.listFiles();
@@ -489,9 +489,9 @@ export class NavComponent {
        const toImport = driveFiles.filter(f => supportedTypes.some(ext => f.name.toLowerCase().endsWith('.' + ext)));
        
        if (toImport.length === 0) {
-           this.importProgress.set('No hay archivos compatibles');
+           this.importProgress.set(this.lang.t('Drive No Compatible'));
            this.driveImporting.set(false);
-           setTimeout(() => { if(this.importProgress() === 'No hay archivos compatibles') this.importProgress.set(''); }, 3000);
+           setTimeout(() => { if(this.importProgress() === this.lang.t('Drive No Compatible')) this.importProgress.set(''); }, 3000);
            return;
        }
 
@@ -504,7 +504,7 @@ export class NavComponent {
        for (const f of toImport) {
           if (!this.driveImporting()) break;
           count++;
-          this.importProgress.set(`Importando ${count}/${toImport.length}...`);
+          this.importProgress.set(`${this.lang.t('Drive Importing')} ${count}/${toImport.length}...`);
           const existing = await this.fileService.getFilesByParent(gdFolderId!);
           if (!existing.some(e => e.name === f.name)) {
               const blob = await this.driveService.downloadFile(f.id);
@@ -513,13 +513,13 @@ export class NavComponent {
           }
        }
        if (this.driveImporting()) {
-           this.importProgress.set('¡Completado!');
-           setTimeout(() => { if(this.importProgress() === '¡Completado!') this.importProgress.set(''); }, 3000);
+           this.importProgress.set(this.lang.t('Drive Completed'));
+           setTimeout(() => { if(this.importProgress() === this.lang.t('Drive Completed')) this.importProgress.set(''); }, 3000);
        }
     } catch (e) {
        console.error(e);
-       this.importProgress.set('Fallo la importación');
-       setTimeout(() => { if(this.importProgress() === 'Fallo la importación') this.importProgress.set(''); }, 3000);
+       this.importProgress.set(this.lang.t('Drive Failed Import'));
+       setTimeout(() => { if(this.importProgress() === this.lang.t('Drive Failed Import')) this.importProgress.set(''); }, 3000);
     } finally {
        this.driveImporting.set(false);
     }
