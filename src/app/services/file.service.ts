@@ -465,6 +465,13 @@ ${navPointsHtml}
     this.notifyChanged();
   }
 
+  async getTotalFilesCount(): Promise<number> {
+    const db = await this.dbPromise;
+    if (!db) return 0;
+    const files = await db.getAll('files');
+    return files.filter(f => f.type === 'file').length;
+  }
+
   async getTotalSize(): Promise<number> {
     const db = await this.dbPromise;
     if (!db) return 0;

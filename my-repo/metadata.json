@@ -1,0 +1,6 @@
+{
+  "name": "Visual X",
+  "description": "A dark-themed local document and comic viewer that supports images, PDFs, ZIP/CBZ archives, and Word files securely right in your browser.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

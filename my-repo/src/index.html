@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Visual X</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    
+    <!-- Open Graph / Meta tags -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://ais-pre-2c3vkbq3u2erqmhnwu2d46-381092709044.us-west2.run.app/" />
+    <meta property="og:title" content="Visual X" />
+    <meta property="og:description" content="A dark-themed secure local document and comic viewer." />
+    <meta property="og:image" content="https://ais-pre-2c3vkbq3u2erqmhnwu2d46-381092709044.us-west2.run.app/icon.png" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://ais-pre-2c3vkbq3u2erqmhnwu2d46-381092709044.us-west2.run.app/" />
+    <meta property="twitter:title" content="Visual X" />
+    <meta property="twitter:description" content="A dark-themed secure local document and comic viewer." />
+    <meta property="twitter:image" content="https://ais-pre-2c3vkbq3u2erqmhnwu2d46-381092709044.us-west2.run.app/icon.png" />
+
+    <link rel="icon" type="image/png" href="/icon.png" />
+    <link rel="apple-touch-icon" href="/icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Visual X">
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+         fetch('/api/log', {
+           method: 'POST', 
+           headers: {'Content-Type': 'application/json'},
+           body: JSON.stringify({ type: 'uncaught', message, source, lineno, colno, stack: error ? error.stack : '' })
+         }).catch(e => console.error(e));
+      };
+      window.addEventListener('unhandledrejection', function(e) {
+         fetch('/api/log', {
+           method: 'POST', 
+           headers: {'Content-Type': 'application/json'},
+           body: JSON.stringify({ type: 'unhandledrejection', reason: e.reason ? e.reason.toString() : 'unknown', stack: e.reason ? e.reason.stack : '' })
+         }).catch(err => console.error(err));
+      });
+    </script>
+  </head>
+  <body>
+    <app-root></app-root>
+    <noscript>Please enable JavaScript to continue using this application.</noscript>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/pwabuilder-sw.js?v=' + Date.now()).then(async (registration) => {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            
+            // Background Sync Registration
+            if ('sync' in registration) {
+              try {
+                await registration.sync.register('visualx-sync');
+                console.log('Background Sync registered successfully.');
+              } catch (err) {
+                console.log('Background Sync registration failed:', err);
+              }
+            }
+
+            // Periodic Background Sync Registration
+            if ('periodicSync' in registration) {
+              try {
+                const status = await navigator.permissions.query({ name: 'periodic-background-sync' });
+                if (status.state === 'granted') {
+                  await registration.periodicSync.register('visualx-periodic-sync', {
+                    minInterval: 24 * 60 * 60 * 1000, // 24 hours
+                  });
+                  console.log('Periodic Background Sync registered successfully.');
+                }
+              } catch (err) {
+                console.log('Periodic Background Sync registration failed:', err);
+              }
+            }
+
+          }, (err) => {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

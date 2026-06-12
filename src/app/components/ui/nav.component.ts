@@ -219,6 +219,12 @@ import { MatIconModule } from '@angular/material/icon';
             </div>
             <span class="text-[9px] sm:text-[10px] mt-0.5 font-medium">{{ lang.t('Settings') }}</span>
           </button>
+          
+          <a href="https://privacy-policy-page-vexreaders.vercel.app" target="_blank" referrerpolicy="no-referrer"
+             class="flex flex-col items-center justify-center w-14 sm:w-16 h-12 rounded-full transition-all duration-300 text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5">
+            <mat-icon [class.scale-90]="true">help_outline</mat-icon>
+            <span class="text-[9px] sm:text-[10px] mt-0.5 font-medium">Legal</span>
+          </a>
         </div>
       </div>
     </nav>

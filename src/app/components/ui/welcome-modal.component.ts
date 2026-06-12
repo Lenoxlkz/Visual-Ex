@@ -40,6 +40,11 @@ import { FormsModule } from '@angular/forms';
                      <div class="text-2xl shrink-0">📁</div>
                      <p class="text-[13px] sm:text-sm mt-0.5" [innerHTML]="lang.t('Welcome Feature 4')"></p>
                   </div>
+                  <div class="text-center mt-2 mb-1">
+                     <span class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400">
+                        Al utilizar Visual-X, usted acepta estas <a href="https://privacy-policy-page-vexreaders.vercel.app" target="_blank" referrerpolicy="no-referrer" class="text-blue-500 hover:text-blue-600 dark:text-blue-400 hover:underline">Condiciones del Servicio</a>.
+                     </span>
+                  </div>
                   <div class="text-[11px] sm:text-xs text-amber-600 dark:text-amber-400/90 leading-relaxed bg-amber-50 dark:bg-amber-500/10 p-2 sm:p-3 rounded-lg border border-amber-200/50 dark:border-amber-500/20" [innerHTML]="lang.t('Welcome Attention')">
                   </div>
                </div>

@@ -24,6 +24,12 @@ import { ConfigService } from '../../services/config.service';
         </div>
         
         <div class="flex items-center gap-1.5 sm:gap-2 justify-end">
+           <!-- Total Files Indicator -->
+           <div class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-white/5 rounded-full text-slate-600 dark:text-slate-300 transition-all hover:scale-105 active:scale-95 group shadow-sm cursor-default btn-main" [title]="lang.t('Total Files') || 'Archivos Totales'">
+              <mat-icon class="text-[18px] w-[18px] h-[18px] group-hover:animate-pulse text-blue-500">description</mat-icon>
+              <span class="text-xs sm:text-sm font-medium">{{ totalFilesCount() }}</span>
+           </div>
+           
            <!-- Total Size Indicator -->
            <div class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-white/5 rounded-full text-slate-600 dark:text-slate-300 transition-all hover:scale-105 active:scale-95 group shadow-sm cursor-default btn-main" [title]="lang.t('Total Size')">
               <mat-icon class="text-[18px] w-[18px] h-[18px] group-hover:animate-pulse text-emerald-500">sd_storage</mat-icon>
@@ -191,6 +197,7 @@ export class LibraryComponent implements OnInit {
   files = signal<AppFile[]>([]);
   activeMenu = signal<AppFile | null>(null);
   totalSize = signal<number>(0);
+  totalFilesCount = signal<number>(0);
 
   constructor() {
      effect(() => {
@@ -219,6 +226,7 @@ export class LibraryComponent implements OnInit {
      });
      this.files.set(res);
      this.totalSize.set(await this.fileService.getTotalSize());
+     this.totalFilesCount.set(await this.fileService.getTotalFilesCount());
   }
 
   getIcon(f: AppFile) {
