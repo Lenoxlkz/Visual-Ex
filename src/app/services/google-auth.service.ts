@@ -87,7 +87,8 @@ export class GoogleAuthService {
               method: 'POST',
               headers: { 
                  'Content-Type': 'application/json',
-                 'Authorization': `Bearer ${idToken}`
+                 'Authorization': `Bearer ${idToken}`,
+                 'X-User-Id': result.user.uid
               },
               // Firebase Auth no devuelve refreshToken de Google en el cliente por seguridad, 
               // pero enviamos el access_token al backend para persistencia. En entorno real 
@@ -117,7 +118,10 @@ export class GoogleAuthService {
       console.log('Iniciando reconexión manual (Renovación silenciosa)...');
       const idToken = await currentUser.getIdToken(true); // force refresh firebase token
       const res = await fetch('/api/auth/token', {
-         headers: { 'Authorization': `Bearer ${idToken}` }
+         headers: { 
+            'Authorization': `Bearer ${idToken}`,
+            'X-User-Id': currentUser.uid
+         }
       });
       if (res.ok) {
          const data = await res.json();

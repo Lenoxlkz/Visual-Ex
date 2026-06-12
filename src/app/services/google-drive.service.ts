@@ -32,7 +32,10 @@ export class GoogleDriveService {
           try {
              const idToken = await user.getIdToken();
              const tokenRes = await fetch('/api/auth/token', {
-                headers: { 'Authorization': `Bearer ${idToken}` }
+                headers: { 
+                   'Authorization': `Bearer ${idToken}`,
+                   'X-User-Id': user.uid
+                }
              });
              if (tokenRes.ok) {
                 const data = await tokenRes.json();

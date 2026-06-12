@@ -19,24 +19,20 @@ app.use(express.json());
 const tokenDatabase = new Map<string, string>();
 
 app.post('/api/auth/token', (req, res) => {
-    // Aquí recibimos el token de acceso o refresh token desde el cliente
-    // y lo vinculamos con el "usuario" (simulado usando un token fijo o el req.headers)
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    const userId = req.headers['x-user-id'] as string;
     const { accessToken } = req.body;
-    if (token && accessToken) {
-        // Usamos el token enviado en la cabecera como llave temporal (simulando Auth guard)
-        tokenDatabase.set(token, accessToken);
+    if (userId && accessToken) {
+        tokenDatabase.set(userId, accessToken);
         res.json({ ok: true, message: 'Token guardado de forma segura en servidor' });
     } else {
-        res.status(400).json({ error: 'Missing token' });
+        res.status(400).json({ error: 'Missing userId or accessToken' });
     }
 });
 
 app.get('/api/auth/token', (req, res) => {
-    // Recuperar token seguro desde la DB
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (token && tokenDatabase.has(token)) {
-        res.json({ ok: true, accessToken: tokenDatabase.get(token) });
+    const userId = req.headers['x-user-id'] as string;
+    if (userId && tokenDatabase.has(userId)) {
+        res.json({ ok: true, accessToken: tokenDatabase.get(userId) });
     } else {
         res.status(404).json({ error: 'Token not found or expired' });
     }
