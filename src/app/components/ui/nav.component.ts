@@ -451,15 +451,25 @@ export class NavComponent {
        await gatherFiles('root', '');
        
        let count = 0;
-       for (const f of allFiles) {
-          if (!this.driveExporting()) break;
-          count++;
-          this.exportProgress.set(`${this.lang.t('Drive Uploading')} ${count}/${allFiles.length}...`);
-          const blob = await this.fileService.getFileContent(f.id);
-          if (blob) {
-              await this.driveService.uploadFile(blob, f.path || f.name, folderId);
+       const total = allFiles.length;
+       const concurrencyLimit = 5;
+       let currentIndex = 0;
+
+       const exportWorker = async () => {
+          while (currentIndex < total && this.driveExporting()) {
+             const index = currentIndex++;
+             const f = allFiles[index];
+             const blob = await this.fileService.getFileContent(f.id);
+             if (blob && this.driveExporting()) {
+                 await this.driveService.uploadFile(blob, f.path || f.name, folderId);
+             }
+             count++;
+             this.exportProgress.set(`${this.lang.t('Drive Uploading')} ${count}/${total}...`);
           }
-       }
+       };
+
+       const workers = Array.from({ length: Math.min(concurrencyLimit, total) }, () => exportWorker());
+       await Promise.all(workers);
        if (this.driveExporting()) {
           this.exportProgress.set(this.lang.t('Drive Completed'));
           setTimeout(() => { if(this.exportProgress() === this.lang.t('Drive Completed')) this.exportProgress.set(''); }, 3000);
@@ -501,17 +511,32 @@ export class NavComponent {
        if (!gdFolderId) gdFolderId = await this.fileService.createFolder('Google Drive Import', 'root');
        
        let count = 0;
-       for (const f of toImport) {
-          if (!this.driveImporting()) break;
-          count++;
-          this.importProgress.set(`${this.lang.t('Drive Importing')} ${count}/${toImport.length}...`);
-          const existing = await this.fileService.getFilesByParent(gdFolderId!);
-          if (!existing.some(e => e.name === f.name)) {
-              const blob = await this.driveService.downloadFile(f.id);
-              if (!this.driveImporting()) break;
-              await this.fileService.storeFile(new File([blob], f.name, { type: f.mimeType }), gdFolderId!);
+       const total = toImport.length;
+       const concurrencyLimit = 5;
+       let currentIndex = 0;
+
+       const existing = await this.fileService.getFilesByParent(gdFolderId!);
+       const existingNames = new Set(existing.map(e => e.name));
+
+       const importWorker = async () => {
+          while (currentIndex < total && this.driveImporting()) {
+             const index = currentIndex++;
+             const f = toImport[index];
+             
+             if (!existingNames.has(f.name)) {
+                 const blob = await this.driveService.downloadFile(f.id);
+                 if (this.driveImporting()) {
+                     await this.fileService.storeFile(new File([blob], f.name, { type: f.mimeType }), gdFolderId!);
+                     existingNames.add(f.name);
+                 }
+             }
+             count++;
+             this.importProgress.set(`${this.lang.t('Drive Importing')} ${count}/${total}...`);
           }
-       }
+       };
+
+       const workers = Array.from({ length: Math.min(concurrencyLimit, total) }, () => importWorker());
+       await Promise.all(workers);
        if (this.driveImporting()) {
            this.importProgress.set(this.lang.t('Drive Completed'));
            setTimeout(() => { if(this.importProgress() === this.lang.t('Drive Completed')) this.importProgress.set(''); }, 3000);

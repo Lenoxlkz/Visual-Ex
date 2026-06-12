@@ -18,6 +18,9 @@ export class GoogleDriveService {
 
     const headers = new Headers(options.headers || {});
     headers.set('Authorization', `Bearer ${token}`);
+    if (!headers.has('Accept-Encoding')) {
+       headers.set('Accept-Encoding', 'gzip');
+    }
 
     return fetch(url, { ...options, headers });
   }
@@ -75,17 +78,75 @@ export class GoogleDriveService {
     if (parentFolderId) {
       metadata.parents = [parentFolderId];
     }
+    const token = this.authService.accessToken();
+    if (!token) throw new Error('Not authenticated');
 
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-    form.append('file', file);
-
-    const res = await this.fetchWithAuth('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,size', {
-      method: 'POST',
-      body: form
-    });
+    const mimeType = file.type || 'application/octet-stream';
     
-    if (!res.ok) throw new Error('Error uploading file');
-    return await res.json();
+    // 1. Initialize Resumable session
+    const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-Upload-Content-Type': mimeType,
+        'X-Upload-Content-Length': file.size.toString(),
+        'Accept-Encoding': 'gzip'
+      },
+      body: JSON.stringify(metadata)
+    });
+
+    if (!initRes.ok) throw new Error('Resumable upload initialization failed');
+    const uploadUrl = initRes.headers.get('Location');
+    if (!uploadUrl) throw new Error('No upload URL returned');
+
+    // 2. Upload chunks
+    const chunkSize = 1048576; // 1MB (must be multiple of 256KB)
+    let start = 0;
+    let end = Math.min(chunkSize, file.size);
+    let lastResponse: Response | null = null;
+    
+    // Fallback for 0-byte files
+    if (file.size === 0) {
+       lastResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Range': `bytes */0` }
+       });
+       return await lastResponse.json();
+    }
+
+    let retryCount = 0;
+    while (start < file.size) {
+      const chunk = file.slice(start, end);
+      lastResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Range': `bytes ${start}-${end - 1}/${file.size}`
+        },
+        body: chunk
+      });
+      
+      if (lastResponse.status === 308) {
+         // Incomplete, continue
+         start = end;
+         end = Math.min(start + chunkSize, file.size);
+         retryCount = 0;
+      } else if (lastResponse.ok || lastResponse.status === 200 || lastResponse.status === 201) {
+         // Finished completely
+         break;
+      } else {
+         if (retryCount < 3) {
+             // We can check the active range by querying the uploadUrl with an empty PUT
+             // but for simplicity, we just retry the same chunk.
+             retryCount++;
+             await new Promise(r => setTimeout(r, 1000 * retryCount));
+         } else {
+             throw new Error('Upload chunk failed after retries');
+         }
+      }
+    }
+
+    if (!lastResponse) throw new Error('Upload failed unpredictably');
+    return await lastResponse.json();
   }
 }
