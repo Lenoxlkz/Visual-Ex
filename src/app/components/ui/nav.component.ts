@@ -458,7 +458,7 @@ export class NavComponent {
        
        let count = 0;
        const total = allFiles.length;
-       const concurrencyLimit = 5;
+       const concurrencyLimit = 15; // Lotes de Peticiones y Paralelismo aumentado a 15
        let currentIndex = 0;
 
        const exportWorker = async () => {
@@ -518,7 +518,7 @@ export class NavComponent {
        
        let count = 0;
        const total = toImport.length;
-       const concurrencyLimit = 5;
+       const concurrencyLimit = 15; // Lotes de Peticiones y Paralelismo aumentado a 15
        let currentIndex = 0;
 
        const existing = await this.fileService.getFilesByParent(gdFolderId!);

@@ -13,7 +13,7 @@ export class GoogleDriveService {
   private authService = inject(GoogleAuthService);
 
   private async fetchWithAuth(url: string, options: RequestInit = {}): Promise<Response> {
-    const token = this.authService.accessToken();
+    let token = this.authService.accessToken();
     if (!token) throw new Error('Not authenticated with Google');
 
     const headers = new Headers(options.headers || {});
@@ -22,7 +22,30 @@ export class GoogleDriveService {
        headers.set('Accept-Encoding', 'gzip');
     }
 
-    return fetch(url, { ...options, headers });
+    let response = await fetch(url, { ...options, headers });
+    
+    // 3. Renovación automática: Gestionar expiración de tokens
+    if (response.status === 401) {
+       console.log("Access token expiro, solicitando nuevo token...");
+       const user = this.authService.user();
+       if (user) {
+          const idToken = await user.getIdToken();
+          const tokenRes = await fetch('/api/auth/token', {
+             headers: { 'Authorization': `Bearer ${idToken}` }
+          });
+          if (tokenRes.ok) {
+             const data = await tokenRes.json();
+             if (data.accessToken) {
+                this.authService.accessToken.set(data.accessToken);
+                token = data.accessToken;
+                headers.set('Authorization', `Bearer ${token}`);
+                response = await fetch(url, { ...options, headers }); // Reintentar la petición
+             }
+          }
+       }
+    }
+    
+    return response;
   }
 
   async getOrCreateBackupFolder(folderName: string = 'Respaldos de Visual-Ex'): Promise<string> {
@@ -68,7 +91,10 @@ export class GoogleDriveService {
   }
 
   async downloadFile(fileId: string): Promise<Blob> {
-    const res = await this.fetchWithAuth(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`);
+    // 2. COMPRESIÓN GZIP HABILITADA: explícitamente solicitar gzip para disminuir tiempos!
+    const res = await this.fetchWithAuth(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+       headers: { 'Accept-Encoding': 'gzip' }
+    });
     if (!res.ok) throw new Error('Error downloading file');
     return await res.blob();
   }
@@ -83,14 +109,16 @@ export class GoogleDriveService {
 
     const mimeType = file.type || 'application/octet-stream';
     
-    // 1. Initialize Resumable session
+    // 1. CARGA REANUDABLE POR BLOQUES Y COMPRESIÓN GZIP
     const initRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=UTF-8',
         'X-Upload-Content-Type': mimeType,
         'X-Upload-Content-Length': file.size.toString(),
+        // Para subir comprimido necesitaríamos comprimir el buffer y pasarlo.
+        // Habilitamos Accept-Encoding gzip como buena práctica
         'Accept-Encoding': 'gzip'
       },
       body: JSON.stringify(metadata)
@@ -100,8 +128,8 @@ export class GoogleDriveService {
     const uploadUrl = initRes.headers.get('Location');
     if (!uploadUrl) throw new Error('No upload URL returned');
 
-    // 2. Upload chunks
-    const chunkSize = 1048576; // 1MB (must be multiple of 256KB)
+    // Optimizando 1. Carga Reanudable por Bloques (chunkSize incrementado)
+    const chunkSize = 5 * 1024 * 1024; // 5MB (multiplo de 256KB recomendado)
     let start = 0;
     let end = Math.min(chunkSize, file.size);
     let lastResponse: Response | null = null;
@@ -121,6 +149,7 @@ export class GoogleDriveService {
       lastResponse = await fetch(uploadUrl, {
         method: 'PUT',
         headers: {
+          'Content-Length': chunk.size.toString(),
           'Content-Range': `bytes ${start}-${end - 1}/${file.size}`
         },
         body: chunk

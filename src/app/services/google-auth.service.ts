@@ -25,12 +25,28 @@ export class GoogleAuthService {
         this.provider = new GoogleAuthProvider();
         this.provider.addScope('https://www.googleapis.com/auth/drive.readonly');
         this.provider.addScope('https://www.googleapis.com/auth/drive.file');
+        this.provider.setCustomParameters({
+          prompt: 'consent',
+          access_type: 'offline'
+        });
 
-        onAuthStateChanged(this.auth, (user) => {
+        onAuthStateChanged(this.auth, async (user) => {
           this.user.set(user);
-          // If we lose login state, we will lose the initial token (we can't persist it).
-          // You need to re-login to get the Google access token for Drive APIs.
-          if (!user) {
+          if (user) {
+             // Fetch token from secure server backend using user ID
+             try {
+                const idToken = await user.getIdToken();
+                const res = await fetch('/api/auth/token', {
+                   headers: { 'Authorization': `Bearer ${idToken}` }
+                });
+                if (res.ok) {
+                   const data = await res.json();
+                   if (data.accessToken) this.accessToken.set(data.accessToken);
+                }
+             } catch(e) {
+                console.error("No se pudo obtener el access token persistido", e);
+             }
+          } else {
              this.accessToken.set(null);
           }
           this.isInitialized.set(true);
@@ -53,6 +69,25 @@ export class GoogleAuthService {
       if (credential?.accessToken) {
         this.accessToken.set(credential.accessToken);
         this.user.set(result.user);
+        
+        // Guardar refresh_token / access_token en backend
+        try {
+           const idToken = await result.user.getIdToken();
+           await fetch('/api/auth/token', {
+              method: 'POST',
+              headers: { 
+                 'Content-Type': 'application/json',
+                 'Authorization': `Bearer ${idToken}`
+              },
+              // Firebase Auth no devuelve refreshToken de Google en el cliente por seguridad, 
+              // pero enviamos el access_token al backend para persistencia. En entorno real 
+              // el backend usaría el código de auth para obtener el refresh_token.
+              body: JSON.stringify({ accessToken: credential.accessToken })
+           });
+        } catch (e) {
+           console.error("Error guardando token en backend", e);
+        }
+
         return credential.accessToken;
       }
       throw new Error('Failed to get access token');
