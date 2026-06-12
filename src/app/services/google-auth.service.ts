@@ -47,11 +47,19 @@ export class GoogleAuthService {
              try {
                 const idToken = await user.getIdToken();
                 const res = await fetch('/api/auth/token', {
-                   headers: { 'Authorization': `Bearer ${idToken}` }
+                   headers: { 
+                      'Authorization': `Bearer ${idToken}`,
+                      'X-User-Id': user.uid
+                   }
                 });
                 if (res.ok) {
                    const data = await res.json();
-                   if (data.accessToken) this.accessToken.set(data.accessToken);
+                   if (data.accessToken) {
+                      this.accessToken.set(data.accessToken);
+                      this.tokenError.set(false);
+                   }
+                } else {
+                   this.tokenError.set(true);
                 }
              } catch(e) {
                 console.error("No se pudo obtener el access token persistido", e);
@@ -61,6 +69,20 @@ export class GoogleAuthService {
           }
           this.isInitialized.set(true);
         });
+
+        // 45 min heartbeat check
+        setInterval(async () => {
+           const token = this.accessToken();
+           if (!token) return;
+           try {
+               const res = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
+                  headers: { 'Authorization': `Bearer ${token}` }
+               });
+               if (res.status === 401) {
+                   this.tokenError.set(true);
+               }
+           } catch(e) { }
+        }, 45 * 60 * 1000);
       } catch (e) {
         console.error("Firebase initialization error", e);
         this.isInitialized.set(true);
@@ -115,25 +137,37 @@ export class GoogleAuthService {
     if (!currentUser) return;
     try {
       this.isLoggingIn.set(true);
-      console.log('Iniciando reconexión manual (Renovación silenciosa)...');
-      const idToken = await currentUser.getIdToken(true); // force refresh firebase token
-      const res = await fetch('/api/auth/token', {
-         headers: { 
-            'Authorization': `Bearer ${idToken}`,
-            'X-User-Id': currentUser.uid
-         }
+      console.log('Iniciando reconexión manual...');
+      
+      // We set custom parameters to either prompt consent or at least select account
+      // to ensure Google generates a fresh access token for the Drive API.
+      this.provider.setCustomParameters({
+        prompt: 'consent'
       });
-      if (res.ok) {
-         const data = await res.json();
-         if (data.accessToken) {
-            this.accessToken.set(data.accessToken);
-            this.tokenError.set(false);
-            console.log('Reconexión exitosa. Nuevo token de acceso obtenido.');
-         } else {
-            this.tokenError.set(true);
+      const result = await signInWithPopup(this.auth, this.provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      
+      if (credential?.accessToken) {
+         this.accessToken.set(credential.accessToken);
+         this.tokenError.set(false);
+         console.log('Reconexión exitosa. Nuevo token de acceso obtenido.');
+         
+         try {
+            const idToken = await result.user.getIdToken();
+            await fetch('/api/auth/token', {
+               method: 'POST',
+               headers: { 
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${idToken}`,
+                  'X-User-Id': result.user.uid
+               },
+               body: JSON.stringify({ accessToken: credential.accessToken })
+            });
+         } catch (e) {
+            console.error("Error guardando token en backend", e);
          }
       } else {
-         console.warn('Reconexión fallida: el backend no devolvió un token válido.');
+         console.warn('Reconexión fallida: el proveedor no devolvió un token de acceso.');
          this.tokenError.set(true);
       }
     } catch (e) {

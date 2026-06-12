@@ -24,40 +24,11 @@ export class GoogleDriveService {
 
     let response = await fetch(url, { ...options, headers });
     
-    // 3. Renovación automática: Gestionar expiración de tokens
+    // 3. Gestionar expiración de tokens
     if (response.status === 401) {
-       console.log("Access token expiro, solicitando nuevo token...");
-       const user = this.authService.user();
-       if (user) {
-          try {
-             const idToken = await user.getIdToken();
-             const tokenRes = await fetch('/api/auth/token', {
-                headers: { 
-                   'Authorization': `Bearer ${idToken}`,
-                   'X-User-Id': user.uid
-                }
-             });
-             if (tokenRes.ok) {
-                const data = await tokenRes.json();
-                if (data.accessToken) {
-                   this.authService.accessToken.set(data.accessToken);
-                   this.authService.tokenError.set(false);
-                   token = data.accessToken;
-                   headers.set('Authorization', `Bearer ${token}`);
-                   response = await fetch(url, { ...options, headers }); // Reintentar la petición
-                } else {
-                   this.authService.tokenError.set(true);
-                }
-             } else {
-                this.authService.tokenError.set(true);
-             }
-          } catch (e) {
-             console.error("Error durante renovación de token", e);
-             this.authService.tokenError.set(true);
-          }
-       } else {
-          this.authService.tokenError.set(true);
-       }
+       console.warn("Access token expiró o es inválido (401 Unauthorized)");
+       this.authService.tokenError.set(true);
+       throw new Error('SESSION_EXPIRED');
     }
     
     return response;
