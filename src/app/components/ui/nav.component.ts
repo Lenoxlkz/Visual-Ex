@@ -103,9 +103,31 @@ import { MatIconModule } from '@angular/material/icon';
                       </div>
                    </div>
                    @if(authService.user()) {
-                     <button (click)="authService.signOut()" class="flex items-center justify-center min-w-16 gap-1.5 px-3 py-2 rounded-full bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors text-red-600 dark:text-red-400">
-                        <span class="text-xs font-medium">{{ lang.t('Drive Log Out') }}</span>
-                     </button>
+                     <div class="flex items-center gap-2">
+                        <button (click)="authService.reconnect()" [disabled]="authService.isLoggingIn()" class="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors text-slate-700 dark:text-slate-300 disabled:opacity-50">
+                           <div class="relative flex h-2 w-2 mr-0.5">
+                              @if(authService.connectionStatus() === 'green') {
+                                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                 <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                              } @else if(authService.connectionStatus() === 'orange') {
+                                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                 <span class="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                              } @else {
+                                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                 <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                              }
+                           </div>
+                           @if(authService.isLoggingIn()) {
+                              <mat-icon class="scale-75 animate-spin w-4 h-4 text-[16px]">refresh</mat-icon>
+                           } @else {
+                              <mat-icon class="scale-75 w-4 h-4 text-[16px]">autorenew</mat-icon>
+                           }
+                           <span class="text-xs font-medium hidden sm:inline">Reconectar</span>
+                        </button>
+                        <button (click)="authService.signOut()" class="flex items-center justify-center min-w-16 gap-1.5 px-3 py-2 rounded-full bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors text-red-600 dark:text-red-400">
+                           <span class="text-xs font-medium">{{ lang.t('Drive Log Out') }}</span>
+                        </button>
+                     </div>
                    } @else {
                      <button (click)="authService.signIn()" [disabled]="authService.isLoggingIn()" class="flex items-center justify-center min-w-16 gap-1.5 px-3 py-2 rounded-full bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors text-blue-600 dark:text-blue-400 disabled:opacity-50">
                         @if(authService.isLoggingIn()) {

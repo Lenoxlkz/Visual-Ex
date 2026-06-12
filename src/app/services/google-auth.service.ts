@@ -1,4 +1,4 @@
-import { Injectable, signal, PLATFORM_ID, inject } from '@angular/core';
+import { Injectable, signal, computed, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, User, Auth } from 'firebase/auth';
@@ -12,6 +12,16 @@ export class GoogleAuthService {
   accessToken = signal<string | null>(null);
   isLoggingIn = signal<boolean>(false);
   isInitialized = signal<boolean>(false);
+  tokenError = signal<boolean>(false);
+
+  connectionStatus = computed<'green' | 'orange' | 'red' | 'disconnected'>(() => {
+    const u = this.user();
+    const t = this.accessToken();
+    if (!u) return 'disconnected';
+    if (!t) return 'red';
+    if (this.tokenError()) return 'orange';
+    return 'green';
+  });
 
   private auth!: Auth;
   private provider!: GoogleAuthProvider;
@@ -94,6 +104,37 @@ export class GoogleAuthService {
     } catch (error) {
       console.error('Sign in error:', error);
       throw error;
+    } finally {
+      this.isLoggingIn.set(false);
+    }
+  }
+
+  async reconnect(): Promise<void> {
+    const currentUser = this.user();
+    if (!currentUser) return;
+    try {
+      this.isLoggingIn.set(true);
+      console.log('Iniciando reconexión manual (Renovación silenciosa)...');
+      const idToken = await currentUser.getIdToken(true); // force refresh firebase token
+      const res = await fetch('/api/auth/token', {
+         headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      if (res.ok) {
+         const data = await res.json();
+         if (data.accessToken) {
+            this.accessToken.set(data.accessToken);
+            this.tokenError.set(false);
+            console.log('Reconexión exitosa. Nuevo token de acceso obtenido.');
+         } else {
+            this.tokenError.set(true);
+         }
+      } else {
+         console.warn('Reconexión fallida: el backend no devolvió un token válido.');
+         this.tokenError.set(true);
+      }
+    } catch (e) {
+      console.error('Error durante la reconexión manual:', e);
+      this.tokenError.set(true);
     } finally {
       this.isLoggingIn.set(false);
     }

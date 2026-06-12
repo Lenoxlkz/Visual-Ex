@@ -29,19 +29,31 @@ export class GoogleDriveService {
        console.log("Access token expiro, solicitando nuevo token...");
        const user = this.authService.user();
        if (user) {
-          const idToken = await user.getIdToken();
-          const tokenRes = await fetch('/api/auth/token', {
-             headers: { 'Authorization': `Bearer ${idToken}` }
-          });
-          if (tokenRes.ok) {
-             const data = await tokenRes.json();
-             if (data.accessToken) {
-                this.authService.accessToken.set(data.accessToken);
-                token = data.accessToken;
-                headers.set('Authorization', `Bearer ${token}`);
-                response = await fetch(url, { ...options, headers }); // Reintentar la petición
+          try {
+             const idToken = await user.getIdToken();
+             const tokenRes = await fetch('/api/auth/token', {
+                headers: { 'Authorization': `Bearer ${idToken}` }
+             });
+             if (tokenRes.ok) {
+                const data = await tokenRes.json();
+                if (data.accessToken) {
+                   this.authService.accessToken.set(data.accessToken);
+                   this.authService.tokenError.set(false);
+                   token = data.accessToken;
+                   headers.set('Authorization', `Bearer ${token}`);
+                   response = await fetch(url, { ...options, headers }); // Reintentar la petición
+                } else {
+                   this.authService.tokenError.set(true);
+                }
+             } else {
+                this.authService.tokenError.set(true);
              }
+          } catch (e) {
+             console.error("Error durante renovación de token", e);
+             this.authService.tokenError.set(true);
           }
+       } else {
+          this.authService.tokenError.set(true);
        }
     }
     
